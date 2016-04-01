@@ -1,0 +1,44 @@
+<html theme-one-dark-ui-layoutmode="auto">
+<head>
+    <link rel="stylesheet" media="all" href="./styles.css">
+
+    <script type="text/javascript" src="./CustomElements.js"></script>
+</head>
+<body class="platform-darwin is-blurred">
+
+<atom-workspace class="workspace scrollbars-visible-always theme-one-dark-syntax theme-one-dark-ui" tabindex="-1">
+    <atom-workspace-axis id='root-workspace-axis' class="horizontal">
+
+        <atom-panel-container class="left">
+            <atom-panel class="left tool-panel panel-left">
+                <div class="scrollpad pane-item padded" style="position: relative; overflow:scroll; height: 100%;">
+                    <div id="fs-tree-panel">
+
+
+                    </div>
+                </div>
+            </atom-panel>
+        </atom-panel-container>
+        <atom-workspace-axis class="vertical">
+            <atom-pane-container id = "root-pane-container"class="panes">
+
+            </atom-pane-container>
+            <atom-panel-container id="bottom-panel-container" style="position: relative; flex-basis: 0px;" class="bottom">
+                <atom-panel id="bottom-panel" class="bottom tool-panel panel-bottom">
+
+                </atom-panel>
+            </atom-panel-container>
+        </atom-workspace-axis>
+
+    </atom-workspace-axis>
+    <atom-panel-container class="modal">
+        <atom-panel id = "modal-panel" class="modal overlay from-top">
+
+        </atom-panel>
+    </atom-panel-container>
+</atom-workspace>
+
+<script type="text/javascript" src="./bundle.js"></script>
+
+</body>
+</html>

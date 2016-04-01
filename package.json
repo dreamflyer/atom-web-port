@@ -1,0 +1,15 @@
+{
+  "name": "atom-web-port",
+  "version": "0.0.1",
+  "description": "Atom Web Port",
+  "private": true,
+  "main": "./src/main",
+  "activationCommands": {},
+
+  "dependencies": {
+    "atom-ui-lib": "0.0.2"
+  },
+  "devDependencies": {
+
+  }
+}
