@@ -5,7 +5,7 @@ import path =require("path");
 import fs = require('fs');
 
 export function doBuild() {
-    var fullPath = path.resolve(__dirname, './src/main.js');
+    var fullPath = path.resolve(__dirname, './src/core/atomWrapperWeb.js');
 
     var currentDirectory = path.dirname(fullPath);
 

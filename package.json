@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Atom Web Port",
   "private": true,
-  "main": "./src/main",
+  "main": "./bundle/main",
   "activationCommands": {},
 
   "dependencies": {

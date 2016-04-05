@@ -260,16 +260,18 @@ export class Workspace {
 }
 
 class Pane {
-    items:any =  {};
+    items:any =  [];
 
     id:string;
-    parent: HTMLDivElement;
     workspace: Workspace;
     arg:any;
 
     container: HTMLDivElement;
-    axis: HTMLDivElement;
+
     views: HTMLDivElement;
+    tabs: HTMLUListElement;
+
+    activeItem = null;
 
     children: Pane[] = [];
 
@@ -277,7 +279,7 @@ class Pane {
 
     constructor(id: string, parentNode:HTMLDivElement, workspace:Workspace, arg:any) {
         this.id = id;
-        this.parent = parentNode;
+        var parent = parentNode;
         this.workspace = workspace;
         this.arg = arg;
 
@@ -287,19 +289,61 @@ class Pane {
         this.container.className = 'pane';
         this.container.id = id;
 
+        this.tabs = document.createElement('ul');
+
+        this.tabs.className = "list-inline tab-bar inset-panel";
+
         this.views = document.createElement('div');
+
         this.views.className = 'item-views';
 
-        this.parent.appendChild(this.container);
+        parent.appendChild(this.container);
 
+        this.container.appendChild(this.tabs);
         this.container.appendChild(this.views);
     }
 
-    destroy() {
-        this.children.forEach(child=> {
-            child.destroy();
-        });
+    destroyItem(item: any): boolean {
+        var destroyed = false;
 
+        var index = -1;
+        
+        var activeFound = false;
+
+        this.items.forEach((itemToDestroy, indexToDestroy) => {
+            if(itemToDestroy === item) {
+                item.destroy && item.destroy();
+
+                item.element && this.views.removeChild(item.element);
+
+                index = indexToDestroy;
+
+                destroyed = true;
+            } else {
+                if(this.activeItem === itemToDestroy) {
+                    activeFound === true;
+                }
+            }
+        });
+        
+        if(!activeFound) {
+            this.activeItem = null;
+        }
+
+        index > -1 && delete this.items[index];
+
+        var lastItem = null;
+
+        this.items.forEach(item => lastItem = item);
+
+        lastItem = lastItem ? (this.activeItem || lastItem) : null;
+        
+        this.refreshTabs(lastItem);
+
+        return destroyed;
+    }
+
+    destroy() {
         this.children = [];
 
 
@@ -315,12 +359,29 @@ class Pane {
             }
         });
 
-        this.items = {};
+        this.items = [];
 
         this.destroyed = true;
 
         if(this.container.parentElement) {
-            this.container.parentElement.removeChild(this.container);
+            var parentElement = this.container.parentElement;
+
+            parentElement.removeChild(this.container);
+            
+            if(parentElement.tagName && parentElement.tagName.toLowerCase() === "atom-pane-axis") {
+                var parentAxis = parentElement;
+
+                if(parentAxis.children.length === 0 && parentAxis.parentElement) {
+                    parentAxis.parentElement.removeChild(parentAxis);
+                } else if(parentAxis.children.length === 1 && parentAxis.parentElement) {
+                    var child = parentAxis.children.item(0);
+
+                    parentAxis.removeChild(child);
+
+                    var parentAxisParent = parentAxis.parentElement;
+                    parentAxisParent.replaceChild(child, parentAxis);
+                }
+            }
         }
 
         workspace.paneDestroyed(this);
@@ -343,35 +404,127 @@ class Pane {
     }
 
     newPane(id: string, arg:any):Pane {
-        this.axis = <HTMLDivElement>document.createElement('atom-pane-axis');
+        var axis = <HTMLDivElement>document.createElement('atom-pane-axis');
 
-        this.axis.className = id === 'left' || id === 'right' ? 'horizontal pane-row' : 'vertical pane-column';
+        axis.className = id === 'left' || id === 'right' ? 'horizontal pane-row' : 'vertical pane-column';
 
         if(this.id === 'main-right') {
-            this.axis.id = 'editor-tools-axis';
+            axis.id = 'editor-tools-axis';
         }
 
-        this.parent.replaceChild(this.axis, this.container);
+        var parent = this.container.parentNode
 
-        this.axis.appendChild(this.container);
+        if(!parent) {
+            return null;
+        }
 
-        var result: Pane = new Pane(this.id + '-' + id, this.axis, this.workspace, arg);
+        parent.replaceChild(axis, this.container);
+
+        axis.appendChild(this.container);
+
+        var result: Pane = new Pane(this.id + '-' + id, axis, this.workspace, arg);
 
         this.children.push(result);
 
         return result;
     }
 
-    addItem(item:any, index:number) {
-        if(this.items[index]) {
-            this.views.removeChild(this.items[index].element);
+    private refreshTabs(activeItem) {
+        this.tabs.innerHTML = "";
+
+        this.items.forEach(item => {
+            var tab = this.tab(item);
+            
+            this.tabs.appendChild(tab);
+
+            var isActive = item === activeItem;
+
+            item.element && (item.element.style.display = (isActive ? null : 'none'));
+
+            isActive && tab.setActive();
+            
+            if(item === activeItem) {
+                tab.setActive();
+
+                if(item.element) {
+                    item.element.style.display = null;
+                }
+
+                console.log("Active: " + item.getTitle());
+            } else {
+                if(item.element) {
+                    item.element.style.display = 'none';
+                }
+
+                console.log("Inactive: " + item.getTitle());
+            }
+        });
+
+        this.activeItem = activeItem;
+    }
+
+    private tab(item): any {
+        var tab = document.createElement('li');
+
+        tab.className = "tab sortable";
+
+        tab.setActive = () => {
+            tab.className = "tab sortable active";
         }
+        
+        tab.addEventListener('click', event => event.srcElement === tab ? this.refreshTabs(item) : null);   
+
+        var label = document.createElement('div');
+
+        label.className = "title";
+        label.innerText = item && item.getTitle ? item.getTitle() : "unknown";
+
+        var closeIcon = document.createElement('div');
+
+        closeIcon.className = "close-icon";
+
+        closeIcon.addEventListener('click', event => {
+            if(event.srcElement !== closeIcon) {
+                event.preventDefault();
+                
+                return;
+            }
+
+            this.destroyItem(item);
+
+            if(this.itemsCount() === 0) {
+                this.destroy();
+            }
+
+            event.preventDefault();
+        });
+
+        tab.appendChild(label);
+        tab.appendChild(closeIcon);
+
+        return tab;
+    }
+
+    private itemsCount(): number {
+        var count = 0;
+
+        this.items.forEach(item => {
+            count ++;
+        });
+
+        return count;
+    }
+
+    addItem(item:any, index:number) {
+        this.destroyItem(this.items[index]);
 
         this.items[index] = item;
 
         item.pane = this;
 
         this.views.appendChild(item.element);
+        
+        this.refreshTabs(item);
 
         if(!isMutationSupport) {
             item.element.dispatchEvent(new global.Event("DOMNodeInserted"));
@@ -916,8 +1069,6 @@ function getGlobal() {
     return globalGetter.apply(null);
 }
 
-(<any>window).remote = {require: () => new Object()};
-
 function getLazy(moduleId) {
     return global.getLazy(moduleId);
 }
@@ -933,3 +1084,16 @@ export function init() {
     
     return workspace;
 }
+
+var atomInstance = {};
+
+Object.defineProperty(atomInstance, 'workspace', {get: () => init()});
+
+(<any>window).remote = {require: () => new Object()};
+(<any>window).atom = atomInstance;
+
+import atomUiLib = require('atom-ui-lib');
+
+var requires =  {"atom-ui-lib" : atomUiLib};
+
+(<any>window).require = name => requires[name];
